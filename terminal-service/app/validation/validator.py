@@ -8,16 +8,18 @@ Interacts with CTFd to award points and log solves.
 
 import logging
 import requests
+from pathlib import Path
 from typing import Dict, Any, Optional
 from app.config import settings
 
 # Import deterministic challenge generator logic
-import sys
-from pathlib import Path
-scripts_dir = Path(__file__).resolve().parent.parent.parent.parent / "challenge-environment" / "scripts"
-sys.path.insert(0, str(scripts_dir))
-
-from generate_challenges import ChallengeGenerator
+try:
+    from app.validation.generate_challenges import ChallengeGenerator
+except ImportError:
+    import sys
+    scripts_dir = Path(__file__).resolve().parent.parent.parent.parent / "challenge-environment" / "scripts"
+    sys.path.insert(0, str(scripts_dir))
+    from generate_challenges import ChallengeGenerator
 
 logger = logging.getLogger("terminal.validation")
 
