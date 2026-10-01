@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  ctfd:
+    build:
+      context: ../ctfd
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - UPLOAD_FOLDER=/var/uploads
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-ctfd}:${POSTGRES_PASSWORD:-ctfd_secure_password}@db:5432/${POSTGRES_DB:-ctfd}
+      - REDIS_URL=redis://cache:6379
+      - SECRET_KEY=${SECRET_KEY:-escape_the_terminal_secure_session_key_2026}
+      - WORKERS=2
+      - LOG_FOLDER=/var/log/CTFd
+      - ACCESS_LOG=-
+      - ERROR_LOG=-
+      - REVERSE_PROXY=true
+    volumes:
+      - ctfd_logs:/var/log/CTFd
+      - ctfd_uploads:/var/uploads
+      - ../ctfd/custom-plugin:/opt/CTFd/CTFd/plugins/escape_theme:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    networks:
+      - internal_network
+      - frontend_network
+
+  terminal-service:
+    build:
+      context: ../terminal-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - SERVER_SECRET=${SECRET_KEY:-escape_master_secret_lan}
+      - COMPETITION_ID=${COMPETITION_ID:-escape2026}
+      - CTFD_URL=http://ctfd:8000
+      - DOCKER_IMAGE=escape-sandbox:latest
+      - CONTAINER_CPU=${CONTAINER_CPU:-0.5}
+      - CONTAINER_MEMORY=${CONTAINER_MEMORY:-256m}
+      - CONTAINER_PIDS=${CONTAINER_PIDS:-100}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - ctfd
+    networks:
+      - internal_network
+      - frontend_network
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-ctfd}
+      - POSTGRES_USER=${POSTGRES_USER:-ctfd}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ctfd_secure_password}
+    volumes:
+      - ctfd_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ctfd} -d ${POSTGRES_DB:-ctfd}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal_network
+
+  cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - ctfd_cache_data:/data
+    networks:
+      - internal_network
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - ctfd
+      - terminal-service
+    networks:
+      - frontend_network
+
+networks:
+  frontend_network:
+    driver: bridge
+  internal_network:
+    driver: bridge
+    internal: true
+
+volumes:
+  ctfd_db_data:
+  ctfd_cache_data:
+  ctfd_uploads:
+  ctfd_logs:

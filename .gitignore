@@ -1,0 +1,44 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+*.env
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Local CTFd Databases & Secrets
+.ctfd_secret_key
+*.db
+*.sqlite
+*.sqlite3
+ctfd/CTFd/ctfd.db
+ctfd/.data/
+
+# Runtime state files
+terminal-service/*.json
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE / Editor Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

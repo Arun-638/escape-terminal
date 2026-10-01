@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+<style>
+  .escape-terminal-wrapper {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 15px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  .terminal-header {
+    background: #161b22;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #30363d;
+  }
+  .terminal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #58a6ff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .terminal-body {
+    height: 550px;
+    padding: 8px;
+    background: #0b0f19;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #3fb950;
+    box-shadow: 0 0 8px #3fb950;
+  }
+  .status-dot.offline {
+    background: #f85149;
+    box-shadow: 0 0 8px #f85149;
+  }
+  .instructions-box {
+    margin-top: 20px;
+    padding: 16px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">🐧 ESCAPE THE TERMINAL</h2>
+      <p class="text-muted mb-0">Isolated Linux Escape Sandbox for <strong>{{ team.name }}</strong> (Team ID: {{ team.id }})</p>
+    </div>
+    <div>
+      <a href="/challenges" class="btn btn-outline-info me-2">Challenges</a>
+      <a href="/scoreboard" class="btn btn-outline-secondary">Scoreboard</a>
+    </div>
+  </div>
+
+  <div class="escape-terminal-wrapper">
+    <div class="terminal-header">
+      <div class="terminal-title">
+        <span id="term-status-dot" class="status-dot offline"></span>
+        <span>Linux Sandbox: <code>escape-team-{{ "%02d"|format(team.id) }}</code></span>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-outline-secondary me-2" onclick="termClear()">Clear</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="termReconnect()">Reconnect</button>
+      </div>
+    </div>
+    <div id="terminal-body" class="terminal-body"></div>
+  </div>
+
+  <div class="instructions-box text-light">
+    <h5>Quick Mission Briefing</h5>
+    <ul class="mb-0 text-muted">
+      <li>All commands execute strictly inside your team's isolated Linux sandbox container.</li>
+      <li>Start by exploring your environment using: <code>pwd</code>, <code>ls -la</code>, and <code>cat README.txt</code>.</li>
+      <li>Once you uncover an access key (format: <code>ESCAPE{...}</code>), submit it on the <a href="/challenges" class="text-info">Challenges</a> page to unlock the next Door.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+<script>
+  let term = null;
+  let fitAddon = null;
+  let ws = null;
+  const teamId = {{ team.id }};
+
+  function initTerminal() {
+    term = new Terminal({
+      cursorBlink: true,
+      fontFamily: 'Consolas, monospace',
+      fontSize: 14,
+      theme: {
+        background: '#0b0f19',
+        foreground: '#c9d1d9',
+        cursor: '#58a6ff'
+      }
+    });
+
+    fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal-body'));
+    fitAddon.fit();
+
+    window.addEventListener('resize', () => {
+      if (fitAddon) {
+        fitAddon.fit();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        }
+      }
+    });
+
+    term.onData(data => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'input', data: data }));
+      }
+    });
+  }
+
+  function connectWs() {
+    if (ws) ws.close();
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const dot = document.getElementById('term-status-dot');
+
+    ws = new WebSocket(`${proto}//${host}/ws/terminal/${teamId}`);
+
+    ws.onopen = () => {
+      dot.className = 'status-dot';
+      ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+      term.focus();
+    };
+
+    ws.onmessage = (e) => {
+      term.write(e.data);
+    };
+
+    ws.onclose = () => {
+      dot.className = 'status-dot offline';
+    };
+
+    ws.onerror = () => {
+      dot.className = 'status-dot offline';
+    };
+  }
+
+  function termClear() {
+    if (term) term.clear();
+  }
+
+  function termReconnect() {
+    connectWs();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initTerminal();
+    connectWs();
+  });
+</script>
+{% endblock %}

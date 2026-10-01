@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Admin Emergency Control Center — Escape The Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0d14;
+            --bg-card: rgba(18, 24, 38, 0.75);
+            --border-card: rgba(255, 255, 255, 0.08);
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 16px 28px;
+            margin-bottom: 24px;
+        }
+
+        .brand h1 {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f43f5e, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .panel-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background: #0284c7; color: white; }
+        .btn-primary:hover { background: #0369a1; }
+        .btn-success { background: #059669; color: white; }
+        .btn-success:hover { background: #047857; }
+        .btn-warning { background: #d97706; color: white; }
+        .btn-warning:hover { background: #b45309; }
+        .btn-danger { background: #e11d48; color: white; }
+        .btn-danger:hover { background: #be123c; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: var(--text-main); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+
+        .form-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 10px;
+        }
+
+        .team-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .team-table th {
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-card);
+        }
+
+        .team-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            background: #10b981;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-link {
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="brand">
+            <h1>⚙️ ADMIN EMERGENCY CONTROL CENTER</h1>
+            <p style="font-size: 13px; color: var(--text-muted);">Command Authority & Sandbox Health Supervisor</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="background: rgba(15,23,42,0.8); padding: 8px 18px; border-radius: 12px; border: 1px solid rgba(56,189,248,0.3);">
+                <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Timer: </span>
+                <span id="admin-timer" style="font-family:'JetBrains Mono'; font-weight:700; font-size:20px; color:#38bdf8;">--:--</span>
+            </div>
+            <div class="nav-links">
+                <a href="/terminal" class="btn-link">💻 Terminal</a>
+                <a href="/scoreboard" class="btn-link">🏁 Scoreboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-grid">
+        <!-- Panel 1: Competition Timer Controls -->
+        <div class="card">
+            <div class="card-title">⏱️ Master Competition Timer</div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+                Controls synchronized server-side countdown clock across all participant terminals.
+            </p>
+
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="controlTimer('start', 3000)">▶ Start 50m</button>
+                <button class="btn btn-warning" onclick="controlTimer('pause')">⏸ Pause</button>
+                <button class="btn btn-primary" onclick="controlTimer('resume')">⏯ Resume</button>
+                <button class="btn btn-secondary" onclick="adjustTimer(300)">+5 Min</button>
+                <button class="btn btn-secondary" onclick="adjustTimer(-300)">-5 Min</button>
+                <button class="btn btn-danger" onclick="controlTimer('reset', 3000)">🔄 Reset (50m)</button>
+            </div>
+            <div id="timer-feedback" style="margin-top: 12px; font-size: 12px; color: var(--accent-cyan);"></div>
+        </div>
+
+        <!-- Panel 2: Emergency Broadcast Banner -->
+        <div class="card">
+            <div class="card-title">📢 Emergency Broadcast Announcement</div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+                Instantly displays a high-priority alert banner at the top of all player terminals and the live projector scoreboard.
+            </p>
+
+            <input type="text" id="broadcast-msg" class="form-input" placeholder="e.g. 5 MINUTES REMAINING! Wrap up Door 5 submissions.">
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="sendBroadcast('alert')">🚨 Broadcast Alert</button>
+                <button class="btn btn-warning" onclick="sendBroadcast('warning')">⚠️ Send Warning</button>
+                <button class="btn btn-primary" onclick="sendBroadcast('info')">ℹ️ Send Info</button>
+                <button class="btn btn-secondary" onclick="clearBroadcast()">🧹 Clear Banner</button>
+            </div>
+            <div id="broadcast-feedback" style="margin-top: 12px; font-size: 12px; color: var(--accent-green);"></div>
+        </div>
+    </div>
+
+    <!-- Panel 3: Team Sandbox Supervision -->
+    <div class="card">
+        <div class="card-title" style="justify-content: space-between;">
+            <span>📦 Team Sandbox Supervision & Rapid Reset</span>
+            <button class="btn btn-secondary" onclick="refreshTeamsTable()">🔄 Refresh Status</button>
+        </div>
+
+        <table class="team-table">
+            <thead>
+                <tr>
+                    <th>Team ID</th>
+                    <th>Sandbox Container</th>
+                    <th>Container Health</th>
+                    <th>Anti-Cheat Proctor</th>
+                    <th>Emergency Actions</th>
+                </tr>
+            </thead>
+            <tbody id="teams-tbody">
+                <!-- Populated dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function updateTimerDisplay() {
+            try {
+                const res = await fetch('/api/competition/timer');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('admin-timer').textContent = `${data.formatted_remaining} (${data.state})`;
+                }
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+
+        async function controlTimer(action, duration) {
+            const body = { action };
+            if (duration) body.duration = duration;
+            const res = await fetch('/api/competition/timer/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            document.getElementById('timer-feedback').textContent = `Action '${action}' applied. Status: ${data.state}`;
+            updateTimerDisplay();
+        }
+
+        async function adjustTimer(delta) {
+            const res = await fetch('/api/competition/timer/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'adjust', delta })
+            });
+            const data = await res.json();
+            document.getElementById('timer-feedback').textContent = `Adjusted by ${delta}s. Remaining: ${data.formatted_remaining}`;
+            updateTimerDisplay();
+        }
+
+        async function sendBroadcast(level) {
+            const msg = document.getElementById('broadcast-msg').value.trim();
+            if (!msg) return;
+            const res = await fetch('/api/admin/announcement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg, level })
+            });
+            document.getElementById('broadcast-feedback').textContent = 'Broadcast transmitted to all client terminals!';
+        }
+
+        async function clearBroadcast() {
+            await fetch('/api/admin/announcement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: null })
+            });
+            document.getElementById('broadcast-msg').value = '';
+            document.getElementById('broadcast-feedback').textContent = 'Broadcast cleared.';
+        }
+
+        async function resetTeamContainer(teamId) {
+            if (!confirm(`Are you sure you want to reset container for Team ${teamId}?`)) return;
+            const res = await fetch(`/api/admin/teams/${teamId}/reset`, { method: 'POST' });
+            if (res.ok) {
+                alert(`Team ${teamId} container reset successfully.`);
+                refreshTeamsTable();
+            }
+        }
+
+        async function pardonTeam(teamId) {
+            if (!confirm(`Pardon Team ${teamId} and reset proctoring strikes?`)) return;
+            const res = await fetch(`/api/admin/teams/${teamId}/pardon`, { method: 'POST' });
+            if (res.ok) {
+                alert(`Team ${teamId} pardoned. Strikes reset to 0.`);
+                refreshTeamsTable();
+            }
+        }
+
+        async function refreshTeamsTable() {
+            const tbody = document.getElementById('teams-tbody');
+            let html = '';
+            for (let i = 1; i <= 10; i++) {
+                const cname = `escape-team-${String(i).padStart(2, '0')}`;
+                let proctorBadge = '🛡️ 0/3 Strikes';
+                let isDisq = false;
+
+                try {
+                    const pRes = await fetch(`/api/terminal/proctor/${i}`);
+                    if (pRes.ok) {
+                        const pData = await pRes.json();
+                        if (pData.disqualified) {
+                            proctorBadge = '<span style="color:#f43f5e; font-weight:800;">🚫 DISQUALIFIED</span>';
+                            isDisq = true;
+                        } else if (pData.warnings > 0) {
+                            proctorBadge = `<span style="color:#f59e0b; font-weight:700;">⚠️ ${pData.warnings}/3 Strikes</span>`;
+                        }
+                    }
+                } catch (e) {}
+
+                html += `
+                    <tr>
+                        <td style="font-weight:700;">Team ${i}</td>
+                        <td style="font-family:'JetBrains Mono'; color:#38bdf8;">${cname}</td>
+                        <td><span class="status-dot"></span> Active</td>
+                        <td style="font-family:'JetBrains Mono'; font-size:12px;">${proctorBadge}</td>
+                        <td style="display:flex; gap:6px;">
+                            <button class="btn btn-warning" style="padding:4px 8px; font-size:11px;" onclick="resetTeamContainer(${i})">
+                                🔄 Reset Container
+                            </button>
+                            <button class="btn btn-success" style="padding:4px 8px; font-size:11px;" onclick="pardonTeam(${i})">
+                                💚 Pardon Strikes
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = html;
+        }
+
+        refreshTeamsTable();
+        updateTimerDisplay();
+        setInterval(updateTimerDisplay, 2000);
+    </script>
+</body>
+</html>

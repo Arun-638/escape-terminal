@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐧 ESCAPE THE TERMINAL — Live Scoreboard & Room Progress</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0d14;
+            --bg-card: rgba(18, 24, 38, 0.75);
+            --border-card: rgba(255, 255, 255, 0.08);
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 16px 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-icon {
+            font-size: 36px;
+            filter: drop-shadow(0 0 12px rgba(6, 182, 212, 0.6));
+        }
+
+        .brand-text h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-text p {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .timer-badge {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 14px;
+            padding: 10px 24px;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+        }
+
+        .timer-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .timer-digits {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 1px;
+        }
+
+        .timer-digits.warning {
+            color: var(--accent-amber);
+        }
+
+        .timer-digits.danger {
+            color: var(--accent-rose);
+            animation: pulse-danger 1s infinite alternate;
+        }
+
+        @keyframes pulse-danger {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0.7; transform: scale(1.03); }
+        }
+
+        /* Announcement banner */
+        .announcement-bar {
+            display: none;
+            background: linear-gradient(90deg, rgba(244, 63, 94, 0.2), rgba(245, 158, 11, 0.2));
+            border: 1px solid rgba(244, 63, 94, 0.4);
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-bottom: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fecdd3;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-card);
+            border-radius: 14px;
+            padding: 18px 20px;
+        }
+
+        .stat-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-main);
+        }
+
+        /* Leaderboard table */
+        .table-container {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 24px;
+            overflow-x: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .table-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-card);
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .rank-cell {
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            width: 60px;
+        }
+
+        .rank-1 { color: #facc15; }
+        .rank-2 { color: #cbd5e1; }
+        .rank-3 { color: #f97316; }
+
+        .team-name {
+            font-weight: 700;
+            font-size: 15px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .team-badge {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.06);
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        /* Door progression nodes */
+        .doors-chain {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .door-node {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s ease;
+        }
+
+        .door-node.cleared {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.6);
+            color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .door-node.in_progress {
+            background: rgba(6, 182, 212, 0.2);
+            border: 1px solid rgba(6, 182, 212, 0.8);
+            color: #06b6d4;
+            animation: pulse-node 1.5s infinite;
+        }
+
+        @keyframes pulse-node {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 4px rgba(6, 182, 212, 0.4); }
+            50% { transform: scale(1.08); box-shadow: 0 0 14px rgba(6, 182, 212, 0.8); }
+        }
+
+        .door-node.locked {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #475569;
+        }
+
+        .score-pill {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 15px;
+            color: #38bdf8;
+        }
+
+        .status-pill {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-escaped {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+
+        .status-active {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-link {
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: 1px solid var(--border-card);
+        }
+
+        .btn-link:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header & Timer -->
+    <div class="header">
+        <div class="brand">
+            <div class="brand-icon">🐧</div>
+            <div class="brand-text">
+                <h1>ESCAPE THE TERMINAL</h1>
+                <p>College LAN Escape-Room Live Leaderboard</p>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div class="timer-badge">
+                <span class="timer-label">Time Remaining</span>
+                <span id="countdown-display" class="timer-digits">--:--</span>
+            </div>
+            <div class="nav-links">
+                <a href="/terminal" class="btn-link">💻 Terminal</a>
+                <a href="/admin" class="btn-link">⚙️ Admin</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Announcement -->
+    <div id="announcement-banner" class="announcement-bar" style="display: none;">
+        <span>🚨</span>
+        <span id="announcement-text">Emergency Broadcast</span>
+    </div>
+
+    <!-- Overview Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-title">Registered Teams</div>
+            <div id="stat-total-teams" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Fully Escaped (6/6)</div>
+            <div id="stat-escaped-teams" class="stat-value" style="color: var(--accent-green);">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Competition Status</div>
+            <div id="stat-comp-status" class="stat-value" style="font-size: 18px; color: var(--accent-cyan); text-transform: uppercase;">READY</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Total Doors Solved</div>
+            <div id="stat-total-solves" class="stat-value" style="color: var(--accent-amber);">0</div>
+        </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="table-container">
+        <div class="table-title">
+            <span>🏁 Live Escape Room Rankings</span>
+            <span style="font-size: 12px; font-weight: 500; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
+                Auto-refreshing every 3s
+            </span>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Rank</th>
+                    <th>Team</th>
+                    <th>Door Progress (1 to 6)</th>
+                    <th>Doors Cleared</th>
+                    <th>Score</th>
+                    <th>Penalties</th>
+                    <th>Net Score</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                        Loading competition standings...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function fetchScoreboard() {
+            try {
+                // Fetch Timer
+                const timerRes = await fetch('/api/competition/timer');
+                if (timerRes.ok) {
+                    const timerData = await timerRes.json();
+                    const timerEl = document.getElementById('countdown-display');
+                    timerEl.textContent = timerData.formatted_remaining;
+                    document.getElementById('stat-comp-status').textContent = timerData.state;
+
+                    if (timerData.remaining_seconds < 300 && timerData.remaining_seconds > 0) {
+                        timerEl.className = 'timer-digits danger';
+                    } else if (timerData.remaining_seconds < 600 && timerData.remaining_seconds > 0) {
+                        timerEl.className = 'timer-digits warning';
+                    } else {
+                        timerEl.className = 'timer-digits';
+                    }
+                }
+
+                // Fetch Scoreboard
+                const scoreRes = await fetch('/api/competition/scoreboard');
+                if (scoreRes.ok) {
+                    const data = await scoreRes.json();
+                    renderScoreboard(data.leaderboard || []);
+                    renderAnnouncement(data.announcement);
+                }
+            } catch (err) {
+                console.warn('Scoreboard fetch error:', err);
+            }
+        }
+
+        function renderAnnouncement(announcement) {
+            const bar = document.getElementById('announcement-banner');
+            const txt = document.getElementById('announcement-text');
+            if (announcement && announcement.message) {
+                txt.textContent = announcement.message;
+                bar.style.display = 'flex';
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function renderScoreboard(teams) {
+            const tbody = document.getElementById('leaderboard-body');
+            document.getElementById('stat-total-teams').textContent = teams.length;
+
+            let escapedCount = 0;
+            let totalSolves = 0;
+
+            if (teams.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:#64748b;">No teams have started solving yet.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            teams.forEach((t) => {
+                if (t.escaped) escapedCount++;
+                totalSolves += t.doors_cleared_count;
+
+                let rankClass = '';
+                let rankSymbol = `#${t.rank}`;
+                if (t.rank === 1) { rankClass = 'rank-1'; rankSymbol = '🥇 1'; }
+                else if (t.rank === 2) { rankClass = 'rank-2'; rankSymbol = '🥈 2'; }
+                else if (t.rank === 3) { rankClass = 'rank-3'; rankSymbol = '🥉 3'; }
+
+                // Generate 6 doors chain
+                let doorsHtml = '<div class="doors-chain">';
+                for (let d = 1; d <= 6; d++) {
+                    const status = t.door_statuses[`door_${d}`] || 'locked';
+                    let icon = d;
+                    if (status === 'cleared') icon = '✓';
+                    doorsHtml += `<div class="door-node ${status}" title="Door ${d}: ${status}">${icon}</div>`;
+                }
+                doorsHtml += '</div>';
+
+                let statusBadge = '';
+                if (t.disqualified) {
+                    statusBadge = '<span class="status-pill" style="background:rgba(244,63,94,0.2); color:#f43f5e; border:1px solid rgba(244,63,94,0.6); font-weight:800;">🚫 DISQUALIFIED</span>';
+                } else if (t.escaped) {
+                    statusBadge = '<span class="status-pill status-escaped">🏆 ESCAPED</span>';
+                } else {
+                    statusBadge = '<span class="status-pill status-active">IN PROGRESS</span>';
+                }
+
+                let strikeIndicator = '';
+                if (t.warnings > 0 && !t.disqualified) {
+                    strikeIndicator = `<span style="font-size:11px; color:#f59e0b; font-family:'JetBrains Mono'; background:rgba(245,158,11,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">⚠️ Strikes: ${t.warnings}/3</span>`;
+                }
+
+                html += `
+                    <tr style="${t.disqualified ? 'opacity: 0.5; background: rgba(244,63,94,0.05);' : ''}">
+                        <td class="rank-cell ${rankClass}">${t.disqualified ? '—' : rankSymbol}</td>
+                        <td>
+                            <div class="team-name">
+                                ${escapeHtml(t.team_name)}
+                                <span class="team-badge">T-${String(t.team_id).padStart(2, '0')}</span>
+                                ${strikeIndicator}
+                            </div>
+                        </td>
+                        <td>${doorsHtml}</td>
+                        <td style="font-family:'JetBrains Mono'; font-weight:700;">${t.doors_cleared_count} / 6</td>
+                        <td class="score-pill">${t.base_score}</td>
+                        <td style="color:#f43f5e; font-family:'JetBrains Mono'; font-weight:600;">-${t.penalties}</td>
+                        <td class="score-pill" style="color:${t.disqualified ? '#94a3b8' : '#10b981'}; text-decoration:${t.disqualified ? 'line-through' : 'none'};">${t.net_score}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('stat-escaped-teams').textContent = escapedCount;
+            document.getElementById('stat-total-solves').textContent = totalSolves;
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, function(m) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
+            });
+        }
+
+        // Poll every 3 seconds
+        fetchScoreboard();
+        setInterval(fetchScoreboard, 3000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐧 Escape The Terminal — Locked Competition Sandbox</title>
+    <!-- Include xterm.js styling -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #0b0f19;
+            color: #c9d1d9;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+        .header {
+            background: linear-gradient(90deg, #161b22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .team-selector {
+            background: #21262d;
+            color: #58a6ff;
+            border: 1px solid #388bfd;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            background-color: rgba(35, 134, 54, 0.2);
+            color: #3fb950;
+            border: 1px solid rgba(56, 139, 253, 0.2);
+        }
+        .status-badge.disconnected {
+            background-color: rgba(218, 54, 51, 0.2);
+            color: #f85149;
+        }
+        .proctor-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .proctor-badge.danger {
+            background-color: rgba(244, 63, 94, 0.2);
+            color: #f43f5e;
+            border-color: rgba(244, 63, 94, 0.5);
+            animation: pulse-danger 1s infinite alternate;
+        }
+        @keyframes pulse-danger {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+        .btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn:hover {
+            background: #30363d;
+            border-color: #8b949e;
+        }
+        .btn-submit {
+            background: #238636;
+            color: white;
+            border-color: #2ea043;
+        }
+        .btn-submit:hover {
+            background: #2ea043;
+        }
+
+        /* Submission Bar */
+        .submission-bar {
+            background: #111827;
+            border-bottom: 1px solid #1f2937;
+            padding: 8px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .submission-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+        }
+        .door-select {
+            background: #1f2937;
+            color: #f1f5f9;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .flag-input {
+            flex: 1;
+            min-width: 260px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+        .flag-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+        .feedback-msg {
+            font-size: 13px;
+            font-weight: 600;
+            display: none;
+        }
+        .feedback-msg.success {
+            color: #10b981;
+            display: inline-block;
+        }
+        .feedback-msg.error {
+            color: #f43f5e;
+            display: inline-block;
+        }
+
+        #terminal-container {
+            flex: 1;
+            padding: 10px;
+            background-color: #0d1117;
+            overflow: hidden;
+        }
+        .xterm {
+            height: 100%;
+        }
+
+        /* Fullscreen Entry Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(10, 13, 20, 0.94);
+            backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+        .modal-card {
+            background: rgba(18, 24, 38, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 540px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        }
+        .modal-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+        .modal-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+        .modal-text {
+            font-size: 14px;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .btn-enter-fullscreen {
+            background: linear-gradient(135deg, #0284c7, #06b6d4);
+            color: #ffffff;
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4);
+            transition: all 0.2s;
+        }
+        .btn-enter-fullscreen:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 25px rgba(6, 182, 212, 0.6);
+        }
+
+        /* Warning Modal */
+        .modal-card.warning-card {
+            border-color: rgba(245, 158, 11, 0.6);
+            box-shadow: 0 0 50px rgba(245, 158, 11, 0.3);
+        }
+        .modal-card.danger-card {
+            border-color: rgba(244, 63, 94, 0.8);
+            box-shadow: 0 0 60px rgba(244, 63, 94, 0.5);
+        }
+        .btn-warning-ack {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Entry Lock Modal (Must enter Full Screen) -->
+    <div id="entry-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-icon">🔒</div>
+            <div class="modal-title">LOCKED COMPETITION SANDBOX</div>
+            <div class="modal-text">
+                This competition operates in a **Strictly Monitored Fullscreen Environment**.<br><br>
+                ⚠️ <strong>ANTI-CHEAT POLICY:</strong><br>
+                Switching tabs, exiting fullscreen, or minimizing the window is recorded as a violation.<br>
+                <span style="color: #f43f5e; font-weight: 700;">3 WARNINGS = AUTOMATIC DISQUALIFICATION</span>.
+            </div>
+            <button class="btn-enter-fullscreen" onclick="startFullscreenSession()">
+                🔒 Enter Full Screen & Unlock Terminal
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. Violation Warning Modal (Shown on Tab Switch) -->
+    <div id="warning-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card warning-card">
+            <div class="modal-icon">⚠️</div>
+            <div id="warning-modal-title" class="modal-title" style="color: #f59e0b;">PROCTORING ALERT (1/3)</div>
+            <div class="modal-text">
+                <strong>TAB SWITCH / FULLSCREEN EXIT DETECTED!</strong><br><br>
+                You are prohibited from using other browser tabs or applications.<br>
+                This incident has been logged and transmitted to the competition proctor.<br><br>
+                <span id="warning-modal-remaining" style="color: #f43f5e; font-weight: 700;">
+                    You have 2 warnings remaining before disqualification.
+                </span>
+            </div>
+            <button class="btn-warning-ack" onclick="resumeFullscreenAfterWarning()">
+                ⚠️ Acknowledge & Return to Full Screen
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. Disqualified Screen (Shown on 3rd violation) -->
+    <div id="disqualified-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card danger-card">
+            <div class="modal-icon">🚫</div>
+            <div class="modal-title" style="color: #f43f5e;">TEAM DISQUALIFIED</div>
+            <div class="modal-text" style="font-size: 15px;">
+                You have received <strong>3 PROCTORING STRIKES</strong> for switching tabs / exiting the locked environment.<br><br>
+                Your terminal session has been <strong>TERMINATED</strong> and your contest score is frozen.<br><br>
+                Please notify the competition administrators at the front desk.
+            </div>
+        </div>
+    </div>
+
+    <header class="header">
+        <div class="title-group">
+            <span style="font-size: 18px;">🐧 ESCAPE THE TERMINAL</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; color: #94a3b8;">Team:</span>
+                <select id="team-selector" class="team-selector" onchange="changeTeam(this.value)">
+                    <option value="1">Team 01</option>
+                    <option value="2">Team 02</option>
+                    <option value="3">Team 03</option>
+                    <option value="4">Team 04</option>
+                    <option value="5">Team 05</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="controls">
+            <span id="proctor-strikes-badge" class="proctor-badge">
+                🛡️ Strikes: 0/3
+            </span>
+            <span id="status-badge" class="status-badge disconnected">
+                <span class="dot"></span>
+                <span id="status-text">Connecting...</span>
+            </span>
+            <a href="/scoreboard" target="_blank" class="btn" style="text-decoration:none;">🏁 Scoreboard</a>
+            <button class="btn" id="btn-reconnect" onclick="connectTerminal()">Reconnect</button>
+            <button class="btn" id="btn-clear" onclick="clearTerminal()">Clear</button>
+        </div>
+    </header>
+
+    <!-- Door Solution Submission Bar -->
+    <div class="submission-bar">
+        <span class="submission-label">🔑 Unlock Door:</span>
+        <select id="door-select" class="door-select">
+            <option value="1">Door 1 (Filesystem)</option>
+            <option value="2">Door 2 (Hidden Hex)</option>
+            <option value="3">Door 3 (Log Audit)</option>
+            <option value="4">Door 4 (Permissions)</option>
+            <option value="5">Door 5 (Environment)</option>
+            <option value="6">Door 6 (Pod Override)</option>
+        </select>
+        <input type="text" id="flag-input" class="flag-input" placeholder="Paste flag or token here (e.g. ESCAPE{DOOR1_...})" onkeydown="if(event.key==='Enter') submitSolution()">
+        <button class="btn btn-submit" onclick="submitSolution()">Submit Key</button>
+        <span id="feedback-msg" class="feedback-msg"></span>
+    </div>
+
+    <div id="terminal-container"></div>
+
+    <!-- xterm.js and FitAddon -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+
+    <script>
+        let term = null;
+        let fitAddon = null;
+        let socket = null;
+        let sessionStarted = false;
+        let lastViolationTime = 0;
+
+        // Parse team_id from URL query or default to 1
+        const urlParams = new URLSearchParams(window.location.search);
+        let teamId = parseInt(urlParams.get('team')) || 1;
+        document.getElementById('team-selector').value = String(teamId);
+
+        function changeTeam(newTeam) {
+            window.location.search = `?team=${newTeam}`;
+        }
+
+        // Check initial proctor status from server
+        async function checkProctorStatus() {
+            try {
+                const res = await fetch(`/api/terminal/proctor/${teamId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    updateProctorUI(data.warnings, data.disqualified);
+                }
+            } catch (err) {
+                console.warn(err);
+            }
+        }
+
+        function updateProctorUI(warnings, disqualified) {
+            const badge = document.getElementById('proctor-strikes-badge');
+            badge.textContent = `🛡️ Strikes: ${warnings}/3`;
+
+            if (warnings >= 2) {
+                badge.className = 'proctor-badge danger';
+            } else {
+                badge.className = 'proctor-badge';
+            }
+
+            if (disqualified) {
+                document.getElementById('entry-modal').style.display = 'none';
+                document.getElementById('warning-modal').style.display = 'none';
+                document.getElementById('disqualified-modal').style.display = 'flex';
+                if (socket) socket.close(4008);
+                if (term) term.dispose();
+            }
+        }
+
+        async function triggerViolation(reason) {
+            if (!sessionStarted) return;
+
+            const now = Date.now();
+            // Debounce: minimum 2 seconds between violations
+            if (now - lastViolationTime < 2000) return;
+            lastViolationTime = now;
+
+            try {
+                const res = await fetch('/api/terminal/proctor/violation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ team_id: teamId, reason: reason })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    updateProctorUI(data.warnings, data.disqualified);
+
+                    if (data.disqualified) {
+                        document.getElementById('disqualified-modal').style.display = 'flex';
+                        if (socket) socket.close(4008);
+                    } else {
+                        // Show warning modal
+                        document.getElementById('warning-modal-title').textContent = `PROCTORING ALERT (${data.warnings}/3)`;
+                        const remaining = 3 - data.warnings;
+                        document.getElementById('warning-modal-remaining').textContent = 
+                            `You have ${remaining} warning${remaining > 1 ? 's' : ''} remaining before immediate disqualification.`;
+                        document.getElementById('warning-modal').style.display = 'flex';
+                    }
+                }
+            } catch (e) {
+                console.error("Proctor violation reporting failed:", e);
+            }
+        }
+
+        // Full Screen controls
+        async function startFullscreenSession() {
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                }
+            } catch (err) {
+                console.warn("Fullscreen request:", err);
+            }
+            document.getElementById('entry-modal').style.display = 'none';
+            sessionStarted = true;
+            initXterm();
+            connectTerminal();
+            setupAntiCheatListeners();
+        }
+
+        async function resumeFullscreenAfterWarning() {
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                }
+            } catch (err) {
+                console.warn("Fullscreen resume:", err);
+            }
+            document.getElementById('warning-modal').style.display = 'none';
+        }
+
+        function setupAntiCheatListeners() {
+            // 1. Detect tab switch
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    triggerViolation("Tab switch or browser minimized");
+                }
+            });
+
+            // 2. Detect window blur
+            window.addEventListener('blur', () => {
+                triggerViolation("Window lost focus (switched application)");
+            });
+
+            // 3. Detect exiting fullscreen
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement && sessionStarted) {
+                    triggerViolation("Exited fullscreen locked mode");
+                }
+            });
+        }
+
+        async function submitSolution() {
+            const door = parseInt(document.getElementById('door-select').value);
+            const submission = document.getElementById('flag-input').value.trim();
+            const feedback = document.getElementById('feedback-msg');
+
+            if (!submission) {
+                feedback.className = 'feedback-msg error';
+                feedback.textContent = 'Please enter a key before submitting.';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/terminal/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        team_id: teamId,
+                        door: door,
+                        submission: submission
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.valid) {
+                    feedback.className = 'feedback-msg success';
+                    feedback.textContent = `🎉 ${data.message} (+100 Points)`;
+                    document.getElementById('flag-input').value = '';
+                    if (door < 6) {
+                        document.getElementById('door-select').value = String(door + 1);
+                    }
+                } else {
+                    feedback.className = 'feedback-msg error';
+                    feedback.textContent = `❌ ${data.detail || data.message || 'Incorrect key. Try again.'}`;
+                }
+            } catch (err) {
+                feedback.className = 'feedback-msg error';
+                feedback.textContent = 'Error connecting to validation engine.';
+            }
+        }
+
+        function initXterm() {
+            if (term) return;
+
+            term = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'block',
+                fontFamily: 'Consolas, "Fira Code", monospace',
+                fontSize: 14,
+                theme: {
+                    background: '#0d1117',
+                    foreground: '#c9d1d9',
+                    cursor: '#58a6ff',
+                    cursorAccent: '#0d1117',
+                    selectionBackground: 'rgba(56, 139, 253, 0.3)',
+                    black: '#484f58',
+                    red: '#ff7b72',
+                    green: '#3fb950',
+                    yellow: '#d29922',
+                    blue: '#58a6ff',
+                    magenta: '#bc8cff',
+                    cyan: '#39c5cf',
+                    white: '#b1bac4',
+                    brightBlack: '#6e7681',
+                    brightRed: '#ffa198',
+                    brightGreen: '#56d364',
+                    brightYellow: '#e3b341',
+                    brightBlue: '#79c0ff',
+                    brightMagenta: '#d2a8ff',
+                    brightCyan: '#56d4dd',
+                    brightWhite: '#f0f6fc'
+                }
+            });
+
+            fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+
+            const container = document.getElementById('terminal-container');
+            term.open(container);
+            fitAddon.fit();
+
+            window.addEventListener('resize', () => {
+                if (fitAddon) {
+                    fitAddon.fit();
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({
+                            type: 'resize',
+                            cols: term.cols,
+                            rows: term.rows
+                        }));
+                    }
+                }
+            });
+
+            term.onData(data => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'input',
+                        data: data
+                    }));
+                }
+            });
+        }
+
+        function updateStatus(connected) {
+            const badge = document.getElementById('status-badge');
+            const text = document.getElementById('status-text');
+            if (connected) {
+                badge.className = 'status-badge';
+                text.innerText = 'ONLINE';
+            } else {
+                badge.className = 'status-badge disconnected';
+                text.innerText = 'OFFLINE';
+            }
+        }
+
+        function connectTerminal() {
+            if (socket) {
+                socket.close();
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}/ws/terminal/${teamId}`;
+
+            updateStatus(false);
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                updateStatus(true);
+                if (term) {
+                    socket.send(JSON.stringify({
+                        type: 'resize',
+                        cols: term.cols,
+                        rows: term.rows
+                    }));
+                    term.focus();
+                }
+            };
+
+            socket.onmessage = (event) => {
+                if (term) term.write(event.data);
+            };
+
+            socket.onclose = () => {
+                updateStatus(false);
+            };
+
+            socket.onerror = (err) => {
+                console.error("Terminal WebSocket error:", err);
+                updateStatus(false);
+            };
+        }
+
+        function clearTerminal() {
+            if (term) term.clear();
+        }
+
+        window.onload = () => {
+            checkProctorStatus();
+        };
+    </script>
+</body>
+</html>
