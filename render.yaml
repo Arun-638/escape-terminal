@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: escape-terminal
+    runtime: docker
+    dockerfilePath: terminal-service/Dockerfile
+    dockerContext: terminal-service
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
