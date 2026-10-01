@@ -325,15 +325,11 @@
     <header class="header">
         <div class="title-group">
             <span style="font-size: 18px;">🐧 ESCAPE THE TERMINAL</span>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 12px; color: #94a3b8;">Team:</span>
-                <select id="team-selector" class="team-selector" onchange="changeTeam(this.value)">
-                    <option value="1">Team 01</option>
-                    <option value="2">Team 02</option>
-                    <option value="3">Team 03</option>
-                    <option value="4">Team 04</option>
-                    <option value="5">Team 05</option>
-                </select>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12px; color: #94a3b8;">Active Team:</span>
+                <span id="team-display-badge" style="background:#1e293b; color:#38bdf8; padding:3px 12px; border-radius:6px; font-weight:700; border:1px solid #0284c7; font-size:13px; font-family:'JetBrains Mono',monospace;">
+                    Authenticating...
+                </span>
             </div>
         </div>
 
@@ -380,13 +376,45 @@
         let sessionStarted = false;
         let lastViolationTime = 0;
 
-        // Parse team_id from URL query or default to 1
-        const urlParams = new URLSearchParams(window.location.search);
-        let teamId = parseInt(urlParams.get('team')) || 1;
-        document.getElementById('team-selector').value = String(teamId);
+        let teamId = 1;
+        let teamName = "Team 1";
 
-        function changeTeam(newTeam) {
-            window.location.search = `?team=${newTeam}`;
+        async function resolveTeamIdentity() {
+            try {
+                const res = await fetch('/api/v1/escape/team-status', { credentials: 'include' });
+                if (res.status === 401 || res.status === 403) {
+                    window.location.href = '/login?next=/terminal';
+                    return false;
+                }
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.data && data.data.team_id) {
+                        teamId = data.data.team_id;
+                        teamName = data.data.team_name || `Team ${teamId}`;
+                        document.getElementById('team-display-badge').textContent = `${teamName} (#${teamId})`;
+                        return true;
+                    } else if (data.error === "No team associated") {
+                        alert("You are logged in, but have not joined or created a team yet! Redirecting to Teams page...");
+                        window.location.href = '/teams';
+                        return false;
+                    }
+                }
+            } catch (err) {
+                console.warn("CTFd auth check skipped (fallback mode):", err);
+            }
+
+            // Fallback for query param (dev / test mode)
+            const urlParams = new URLSearchParams(window.location.search);
+            const qTeam = urlParams.get('team');
+            if (qTeam) {
+                teamId = parseInt(qTeam);
+                document.getElementById('team-display-badge').textContent = `Team #${teamId} (Test Mode)`;
+                return true;
+            }
+
+            // If not logged in and no query param, send to CTFd login
+            window.location.href = '/login?next=/terminal';
+            return false;
         }
 
         // Check initial proctor status from server
@@ -662,8 +690,11 @@
             if (term) term.clear();
         }
 
-        window.onload = () => {
-            checkProctorStatus();
+        window.onload = async () => {
+            const ok = await resolveTeamIdentity();
+            if (ok) {
+                checkProctorStatus();
+            }
         };
     </script>
 </body>

@@ -13,9 +13,12 @@ from flask import Blueprint, render_template, redirect, url_for, flash, jsonify
 from CTFd.utils.user import authed, get_current_user, get_current_team
 from CTFd.utils.decorators import authed_only
 from CTFd.utils.decorators.modes import require_team_mode
+from CTFd.plugins import register_user_page_menu_bar
 
 
 def load(app):
+    register_user_page_menu_bar("🐧 Terminal", "/terminal")
+
     escape_bp = Blueprint(
         "escape_terminal",
         __name__,

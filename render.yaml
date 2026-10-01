@@ -2,8 +2,8 @@ services:
   - type: web
     name: escape-terminal
     runtime: docker
-    dockerfilePath: terminal-service/Dockerfile
-    dockerContext: terminal-service
+    dockerfilePath: Dockerfile
+    dockerContext: .
     plan: free
     region: oregon
     envVars:
