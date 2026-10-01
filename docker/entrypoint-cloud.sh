@@ -4,10 +4,33 @@ set -e
 PORT=${PORT:-8080}
 echo "[INIT] Booting Escape The Terminal Unified Cloud Platform on Port $PORT..."
 
+cd /opt/CTFd
+
 # Normalize postgres:// to postgresql:// for SQLAlchemy compatibility
 if [ -n "$DATABASE_URL" ]; then
     export DATABASE_URL="${DATABASE_URL/#postgres:\/\//postgresql:\/\/}"
-    echo "[INIT] Supabase PostgreSQL database URL configured."
+    echo "[INIT] External DATABASE_URL detected. Testing connection (5s timeout)..."
+    if python -c "
+import os, sys
+from sqlalchemy import create_engine
+try:
+    url = os.environ['DATABASE_URL']
+    engine = create_engine(url, connect_args={'connect_timeout': 5})
+    with engine.connect() as conn:
+        print('[INIT] Successfully authenticated with external PostgreSQL database!')
+except Exception as err:
+    print('[WARN] Could not connect to external database:', err)
+    sys.exit(1)
+"; then
+        echo "[INIT] Running database migrations on external database..."
+        export FLASK_APP=CTFd
+        flask db upgrade || true
+    else
+        echo "[WARN] External database connection failed. Falling back to built-in SQLite database."
+        unset DATABASE_URL
+    fi
+else
+    echo "[INIT] No external database configured. Using built-in SQLite database."
 fi
 
 export FLASK_APP=CTFd
@@ -20,14 +43,6 @@ envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 # Start CTFd Platform in background (Internal port 8000)
 echo "[INIT] Launching CTFd on 127.0.0.1:8000..."
-cd /opt/CTFd
-
-if [ -n "$DATABASE_URL" ]; then
-    echo "[INIT] Running database migrations on Supabase..."
-    flask db upgrade || true
-fi
-
-# Run CTFd using production Gunicorn sync worker
 gunicorn 'CTFd:create_app()' \
     --bind '127.0.0.1:8000' \
     --workers 1 \
@@ -47,7 +62,7 @@ for i in {1..30}; do
         echo "[INIT] CTFd is healthy and ready to serve!"
         break
     fi
-    echo "[INIT] Waiting for CTFd database / initialization... ($i/30)"
+    echo "[INIT] Waiting for CTFd startup... ($i/30)"
     sleep 2
 done
 
